@@ -1,0 +1,166 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model Comunidad {
+  id        Int       @id @default(autoincrement())
+  nombre    String
+  region    String
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  familias  Familia[]
+}
+
+model Familia {
+  id             Int              @id @default(autoincrement())
+  nombre         String
+  comunidadId    Int
+  miembros       Int
+  horasDadas     Int              @default(0)
+  horasRecibidas Int              @default(0)
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+  ayudasDestino  AyudaAsignada[]  @relation("AyudasDestino")
+  ayudasOrigen   AyudaAsignada[]  @relation("AyudasOrigen")
+  comunidad      Comunidad        @relation(fields: [comunidadId], references: [id])
+  jobs           Job[]
+  solicitudes    SolicitudAyuda[]
+  users          User[]
+}
+
+model SolicitudAyuda {
+  id             Int             @id @default(autoincrement())
+  familiaId      Int
+  tipo           TipoAyuda
+  descripcion    String
+  fechaInicio    DateTime
+  fechaFin       DateTime
+  horasEstimadas Int
+  urgencia       Urgencia        @default(MEDIA)
+  estado         EstadoSolicitud @default(PENDIENTE)
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+  ayudas         AyudaAsignada[]
+  familia        Familia         @relation(fields: [familiaId], references: [id])
+}
+
+model AyudaAsignada {
+  id          Int             @id @default(autoincrement())
+  origenId    Int
+  destinoId   Int
+  solicitudId Int?
+  tipo        TipoAyuda
+  fecha       DateTime
+  horas       Int
+  estado      EstadoAyuda     @default(PROGRAMADO)
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+  destino     Familia         @relation("AyudasDestino", fields: [destinoId], references: [id])
+  origen      Familia         @relation("AyudasOrigen", fields: [origenId], references: [id])
+  solicitud   SolicitudAyuda? @relation(fields: [solicitudId], references: [id])
+}
+
+model User {
+  id        Int      @id @default(autoincrement())
+  email     String   @unique
+  password  String
+  role      Role
+  familiaId Int?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  jobs      Job[]
+  familia   Familia? @relation(fields: [familiaId], references: [id])
+}
+
+model Job {
+  id           Int         @id @default(autoincrement())
+  tipo         String
+  estado       String
+  userId       Int
+  familiaId    Int?
+  params       Json
+  seed         String?
+  motorVersion String?
+  datasetPath  String?
+  datasetHash  String?
+  etaMin       Int?
+  startedAt    DateTime?
+  finishedAt   DateTime?
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+  artifacts    Artifact[]
+  familia      Familia?    @relation(fields: [familiaId], references: [id])
+  user         User        @relation(fields: [userId], references: [id])
+  events       JobEvent[]
+  metrics      JobMetric[]
+}
+
+model JobMetric {
+  id         Int   @id @default(autoincrement())
+  jobId      Int
+  generation Int
+  best       Float
+  avg        Float
+  elapsedMs  Int?
+  payload    Json?
+  job        Job   @relation(fields: [jobId], references: [id])
+}
+
+model JobEvent {
+  id        Int      @id @default(autoincrement())
+  jobId     Int
+  type      String
+  message   String
+  timestamp DateTime @default(now())
+  job       Job      @relation(fields: [jobId], references: [id])
+}
+
+model Artifact {
+  id        Int      @id @default(autoincrement())
+  jobId     Int
+  kind      String
+  url       String
+  size      Int?
+  checksum  String?
+  createdAt DateTime @default(now())
+  job       Job      @relation(fields: [jobId], references: [id])
+}
+
+enum TipoAyuda {
+  SIEMBRA
+  COSECHA
+  RIEGO
+  LIMPIEZA_CANAL
+  CONSTRUCCION
+  PRESTAMO_HERRAMIENTA
+  PRESTAMO_ANIMAL
+  OTRA
+}
+
+enum Urgencia {
+  BAJA
+  MEDIA
+  ALTA
+}
+
+enum EstadoSolicitud {
+  PENDIENTE
+  PLANIFICADA
+  COMPLETADA
+  CANCELADA
+}
+
+enum EstadoAyuda {
+  PROGRAMADO
+  REALIZADO
+  CANCELADO
+}
+
+enum Role {
+  ADMIN
+  FAMILIA
+}
